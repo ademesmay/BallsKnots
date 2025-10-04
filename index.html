@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ball Chain Applet</title>
+    <style>
+      html, body, #app { margin: 0; height: 100%; overflow: hidden; }
+
+      /* UI overlay above the canvas */
+      #ui {
+        position: absolute; inset: 0;
+        z-index: 10;
+        pointer-events: none;    /* let camera orbit work anywhere except on controls */
+        font: 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: #222;
+      }
+      /* Right panel items keep absolute positions & pointer events */
+      #py-pane, #run-py, #constraintWarning { pointer-events: auto; }
+      #py-pane   { position: absolute; right: 8px; top: 8px; width: 420px; height: 50%; }
+      #run-py    { position: absolute; right: 8px; top: calc(8px + 50% + 8px); }
+      #constraintWarning {
+        position:absolute; right:8px; top:65%; width:420px; max-height:30%;
+        overflow:auto; color:#c00; font-size:12px; white-space:pre-wrap;
+      }
+
+      /* Bottom-left control panel (stacked, spacious) */
+      #controlPanel {
+        position: absolute; left: 12px; bottom: 12px; width: 280px;
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 10px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+        padding: 12px 12px;
+        display: flex; flex-direction: column; gap: 10px;
+        pointer-events: auto;  /* clickable */
+      }
+      .row { display: flex; flex-direction: column; gap: 6px; }
+      .row label { font-weight: 600; }
+      .row select, .row input[type=number] {
+        height: 32px; box-sizing: border-box; width: 100%;
+        border: 1px solid #bbb; border-radius: 8px; padding: 6px 8px; background:#fff;
+      }
+      .row input[type=range] { width: 100%; }
+      .hint { font-size: 11px; color:#666; }
+
+      /* Make sure canvas is under UI */
+      canvas { display:block; }
+      #controlPanel .row.inline { align-items: center; }
+      #controlPanel .row.inline > input[type="checkbox"] {
+         margin: 0;             /* remove default top offset */
+         width: 16px; height: 16px;
+         }
+      #controlPanel .row.inline > label { line-height: 1; }
+      #controlPanel .row.inline.closed-left { flex-direction: row-reverse; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- UI overlay -->
+    <div id="ui">
+      <!-- Right-side tools -->
+      <textarea id="py-pane"></textarea>
+      <button id="run-py">Run Python</button>
+      <div id="constraintWarning"></div>
+
+      <!-- Bottom-left control panel -->
+      <div id="controlPanel">
+        <div class="row">
+          <label for="presetSelect">Preset</label>
+          <select id="presetSelect" title="Starting positions">
+            <option value="default11">Default chain (11)</option>
+            <option value="trefoil11">(Invalid) overhand knot (11)</option>
+            <option value="figure8_16">(Non-locked) Figure-8 (16)</option>
+            <option value="double_overhand_18">(Non-locked) Double overhand knot (18)</option>
+            <option value="stevedore_22">(Invalid) Stevedore knot (22)</option>
+            <option value="double_fisherman_37">(Locked?) Double Fisherman Knot (37)</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="ballCountInput">Number of Balls</label>
+          <input id="ballCountInput" type="number" min="2" max="60" step="1" value="11" />
+        </div>
+
+        <div class="row">
+          <label for="ratioInput">Overlap ratio</label>
+          <input id="ratioInput" type="number" min="0.8" max="1.2" step="0.001" value="1.000" />
+          <div class="hint">Non-neighbor min distance = 2 × ratio</div>
+        </div>
+
+        
+        <label class="row inline closed-left" style="font-weight:600; cursor:pointer;">
+         <input id="closedChain" type="checkbox" />
+         <span>Closed chain</span>
+        </label>
+        <div class="row">
+          <label for="opacitySlider">Ball opacity</label>
+          <input id="opacitySlider" type="range" min="0.1" max="1" step="0.01" value="0.9" />
+        </div>
+
+        <div class="row">
+          <label for="tubeColorSlider">Tube darkness</label>
+          <input id="tubeColorSlider" type="range" min="0" max="1" step="0.001" value="0.3" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Pyodide (pinned) -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+    <!-- Vite entry -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
