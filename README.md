@@ -1,15 +1,15 @@
-#BallsKnots
+# BallsKnots
 
 BallsKnots is a JavaScript applet to work with ball representations of knotted chains and cycles. It relies on three.js and Pyodide for the python scripting.
 
-##User interface and features
+## User interface and features
 
 * Basic 3d navigation using the mouse.
 * Basic physical-based engine to enforce tangency and overlap constraints.
 * A few stopper knots as presets.
 * Python scripting, the api being (for now) documented as a comment in the python box.
 
-##Local installation
+## Local installation
 
 To run locally, install Node.js:
 
@@ -48,7 +48,7 @@ npx vite
 
 This will display a localhost url which you can use in your browser to access the applet.
 
-##Build
+## Build
 
 Just run
 
@@ -59,6 +59,6 @@ npm run build
 and you can upload the everything in the built ./dist folder to your website.
 
 
-##License
+## License
 
 GPL 3.0
