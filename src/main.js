@@ -9,7 +9,13 @@ const spheres = []; // dynamic list of sphere meshes
 let N = 11;         // current ball count
 const R = 1;
 const D = 2 * R;
-
+let mode = 'balls';          // 'balls' | 'sticks'
+let fixedSticks = false;     // only used in sticks mode
+let tubeRadiusSticks = 0.05; // sticks thickness (reuses the “ratio” control)
+let segmentCyls = [];        // cylinder meshes for sticks mode
+let restLengths = [];        // neighbor rest lengths when fixed sticks
+let stickVertexSpheres = []; // tiny spheres at vertices (sticks mode only)
+let stickVertexMaterial = null;
 let ratio = 1.0;          // virtual radius for non-neighbor constraints (0.8..1.0)
 let sphereOpacity = 0.9;  // UI-controlled opacity
 let tubeDark = 0.8;       // 0..1, 1=darkest
@@ -108,7 +114,21 @@ const STEVEDORE_22 = [
   [ 1.304442660628876,  -2.4405498783532478, -2.9054203342120486]
 ];
 
-const LOCKED_DOUBLE_FISHERMAN_37=[[2.873130,16.967777,19.664950],[3.587838,15.512116,18.494375],[3.347067,14.627039,16.717111],[2.495361,12.829380,16.509697],[1.787134,10.959353,16.472132],[2.765861,9.838331,17.808322],[4.141680,10.953551,18.737519],[4.938975,12.685074,19.342621],[5.293810,14.468360,18.509565],[4.941728,15.787787,17.048350],[3.124593,16.607408,16.886351],[1.764604,15.376588,17.683541],[2.675079,13.736420,18.377000],[4.325794,13.056391,17.475502],[5.635883,11.970550,16.424494],[5.828447,12.173977,14.444207],[4.213247,12.591523,13.341128],[2.460712,13.044023,14.191929],[0.892935,12.572663,15.340797],[0.717176,12.416905,17.326961],[2.394311,11.764204,18.199427],[3.735530,11.268444,16.801088],[4.759392,10.659380,15.194617],[4.903769,8.664919,15.158802],[6.421082,8.173964,16.365752],[6.910150,9.365598,17.895726],[7.008515,11.361581,17.815871],[6.992380,13.250788,17.159643],[5.551022,13.908938,15.939263],[4.106942,12.663174,15.337015],[2.869304,11.184792,14.805374],[3.249083,9.547395,15.889208],[4.821537,9.620111,17.122943],[6.462926,10.157685,16.114550],[7.795253,10.432765,14.648522],[9.003727,10.987144,13.154449],[10.877002,11.265632,12.511579]];
+const KNOT_9_29 = [
+  [-0.01705188882962603,	-0.8472070769441673,	0.5309890788547935],
+  [0.041386237542474724,	0.04265321980605685,	0.07851406556265417],
+  [-0.006817402438744069,	-0.9406813617024611,	0.25381241096850504],
+  [-0.028582515259995032,	-0.09019744875337588,	0.7793629734063082],
+  [0.06629662310464379,	-0.06256778735228902,	-0.21574232298902563],
+  [0.06914020976103849,	-0.24079725362023752,	0.7682425200694282],
+  [-0.3617541314019883,	-0.7692376495316422,	0.03675033643198222],
+  [0.29177162736175377,	-0.5711160126667256,	0.7672651546514633],
+  [0,	0,	0]
+];
+
+
+
+//const LOCKED_DOUBLE_FISHERMAN_37=[[2.873130,16.967777,19.664950],[3.587838,15.512116,18.494375],[3.347067,14.627039,16.717111],[2.495361,12.829380,16.509697],[1.787134,10.959353,16.472132],[2.765861,9.838331,17.808322],[4.141680,10.953551,18.737519],[4.938975,12.685074,19.342621],[5.293810,14.468360,18.509565],[4.941728,15.787787,17.048350],[3.124593,16.607408,16.886351],[1.764604,15.376588,17.683541],[2.675079,13.736420,18.377000],[4.325794,13.056391,17.475502],[5.635883,11.970550,16.424494],[5.828447,12.173977,14.444207],[4.213247,12.591523,13.341128],[2.460712,13.044023,14.191929],[0.892935,12.572663,15.340797],[0.717176,12.416905,17.326961],[2.394311,11.764204,18.199427],[3.735530,11.268444,16.801088],[4.759392,10.659380,15.194617],[4.903769,8.664919,15.158802],[6.421082,8.173964,16.365752],[6.910150,9.365598,17.895726],[7.008515,11.361581,17.815871],[6.992380,13.250788,17.159643],[5.551022,13.908938,15.939263],[4.106942,12.663174,15.337015],[2.869304,11.184792,14.805374],[3.249083,9.547395,15.889208],[4.821537,9.620111,17.122943],[6.462926,10.157685,16.114550],[7.795253,10.432765,14.648522],[9.003727,10.987144,13.154449],[10.877002,11.265632,12.511579]];
 
 init();
 animate();
@@ -158,11 +178,11 @@ function init() {
   ballInput.addEventListener('input',  ()=>{/* live typing allowed; apply on change */});
 
   // UI: number input for Ratio
-  const ratioInput = document.getElementById('ratioInput');
-  ratioInput.value = ratio.toFixed(3);
-  const applyRatioInput = () => setRatio(parseFloat(ratioInput.value || ratio));
-  ratioInput.addEventListener('change', applyRatioInput);
-  ratioInput.addEventListener('input',  ()=>{/* apply on change to avoid jitter */});
+  //const ratioInput = document.getElementById('ratioInput');
+  //ratioInput.value = ratio.toFixed(3);
+  //const applyRatioInput = () => setRatio(parseFloat(ratioInput.value || ratio));
+  //ratioInput.addEventListener('change', applyRatioInput);
+  //ratioInput.addEventListener('input',  ()=>{/* apply on change to avoid jitter */});
 
   // UI: opacity slider
   const opacitySlider = document.getElementById('opacitySlider');
@@ -183,6 +203,45 @@ function init() {
   const closedBox = document.getElementById('closedChain');
   closedBox.checked = closedChain;
   closedBox.addEventListener('change', () => setClosedChain(closedBox.checked));
+
+
+  // Mode dropdown
+  const modeSelect = document.getElementById('modeSelect');
+  modeSelect.value = mode;
+  modeSelect.addEventListener('change', () => setMode(modeSelect.value));
+
+  // Repurpose ratio input label + step/min/max between modes
+  //const ratioInput = document.getElementById('ratioInput');
+  const ratioLabel = document.querySelector('label[for="ratioInput"]'); // your existing label
+
+  const ratioInput = document.getElementById('ratioInput');
+  configureRatioForMode(); // set label/limits/value based on current mode
+  ratioInput.addEventListener('change', () => {
+    const v = parseFloat(ratioInput.value);
+    if (Number.isNaN(v)) return;
+    if (mode === 'balls') setRatio(v); else setTubeThickness(v);
+  });
+  // allow arrow steppers to reflect immediately:
+  ratioInput.addEventListener('input', () => {
+    const v = parseFloat(ratioInput.value);
+    if (Number.isNaN(v)) return;
+    if (mode === 'balls') setRatio(v); else setTubeThickness(v);
+  });
+
+  //ratioInput.addEventListener('change', () => {
+  //  if (mode === 'balls') setRatio(parseFloat(ratioInput.value || ratio));
+  //  else setTubeThickness(parseFloat(ratioInput.value || tubeRadiusSticks));
+  //});
+
+  // Fixed-length checkbox (only shown in sticks mode)
+  const fixedRow = document.getElementById('fixedSticksRow');
+  const fixedBox = document.getElementById('fixedSticks');
+  fixedRow.style.display = (mode === 'sticks') ? '' : 'none';
+  fixedBox.checked = fixedSticks;
+  fixedBox.addEventListener('change', () => {
+    fixedSticks = fixedBox.checked;
+    if (fixedSticks) captureRestLengths();
+  });
 
 
   // Pyodide API
@@ -242,22 +301,28 @@ function makeSphereMaterial() {
 
 function addBallAtIndex(i) {
   const mesh = new THREE.Mesh(sphereGeom, makeSphereMaterial());
+    // hide spheres in sticks mode
+  mesh.visible = (mode === 'balls');
 
   if (spheres.length === 0) {
     mesh.position.set(0, 0, 0);
   } else if (spheres.length === 1) {
-    mesh.position.copy(spheres[0].position).add(new THREE.Vector3(D * 0.9, 0, 0));
+        // extend by one segment: balls -> ~D, sticks -> length of segment 0
+    const a = spheres[0].position.clone();
+    const extLen = (mode === 'sticks') ? D : D * 0.9;
+    mesh.position.copy(a).add(new THREE.Vector3(extLen, 0, 0));
   } else {
     const last = spheres[spheres.length - 1].position.clone();
     const prev = spheres[spheres.length - 2].position.clone();
     const dir  = last.clone().sub(prev);
     if (dir.lengthSq() < 1e-8) dir.set(1, 0, 0);
     dir.normalize();
-    mesh.position.copy(last).addScaledVector(dir, D * 0.9);
+        // balls: use ~D; sticks: match previous segment length
+    const prevLen = last.distanceTo(prev) || D;
+    const extLen  = (mode === 'sticks') ? prevLen : D * 0.9;
+    mesh.position.copy(last).addScaledVector(dir, extLen);
   }
-
-  if (spheres.length % 2 === 1) mesh.position.y += 0.8;
-
+  if (mode === 'balls' && spheres.length % 2 === 1) mesh.position.y += 0.8;
   scene.add(mesh);
   spheres.push(mesh);
 }
@@ -273,6 +338,8 @@ function updateBallCountInternal(targetN) {
   while (spheres.length < targetN) addBallAtIndex(spheres.length);
   while (spheres.length > targetN) removeLastBall();
   N = spheres.length;
+    // ensure visibility matches current mode for all spheres
+  for (const s of spheres) s.visible = (mode === 'balls');
   rebuildTubeCenterline();
   resetDragControls();
 }
@@ -281,13 +348,36 @@ function setBallCount(n) {
   updateBallCountInternal(n);
   const inp = document.getElementById('ballCountInput');
   if (inp) inp.value = String(N);
+  if (mode === 'sticks') { captureRestLengths(); rebuildStickCylinders(); }
+  if (mode === 'sticks') {
+    captureRestLengths();
+    rebuildStickCylinders();
+    rebuildStickVertexSpheres();
+  }
 }
+
+function setClosedChain(v) {
+  closedChain = !!v;
+  const P = spheres.map(m => m.position.clone());
+  projectConstraints(P, D, 40);
+  if (closedChain) enforcePairTangency(P, 0, P.length - 1, D, 40);
+  resolveOverlaps(P, 2 * R * ratio, 8);
+  for (let i = 0; i < spheres.length; i++) spheres[i].position.copy(P[i]);
+  if (mode === 'sticks') { captureRestLengths(); rebuildStickCylinders(); }
+  if (mode === 'sticks') {
+    captureRestLengths();
+    rebuildStickCylinders();
+    rebuildStickVertexSpheres();
+  }
+}
+
+
 
 function setRatio(val) {
   const clamped = Math.max(0.8, Math.min(1.2, Number(val)));
   ratio = clamped;
   const inp = document.getElementById('ratioInput');
-  if (inp) inp.value = ratio.toFixed(3);
+  if (inp && mode === 'balls') inp.value = ratio.toFixed(3);
 }
 
 function setSphereOpacity(v) {
@@ -335,16 +425,68 @@ function enforcePairTangency(P, i, j, targetDist, iters = 1) {
   }
 }
 
-function setClosedChain(v) {
-  closedChain = !!v;
-  rebuildTubeCenterline();
-  // quick settle to respect closure right away
-  const P = spheres.map(m => m.position.clone());
-  projectConstraints(P, D, 40);
-  if (closedChain) enforcePairTangency(P, 0, P.length - 1, D, 40);
-  resolveOverlaps(P, 2 * R * ratio, 8);
-  for (let i = 0; i < spheres.length; i++) spheres[i].position.copy(P[i]);
+function setMode(m) {
+  mode = (m === 'sticks') ? 'sticks' : 'balls';
+  // show/hide spheres
+  for (const s of spheres) s.visible = (mode === 'balls');
+  if (mode === 'sticks') {
+   if (tubeMesh) tubeMesh.visible = false;
+  } else {
+   if (tubeMesh) tubeMesh.visible = true;
+   else rebuildTubeCenterline(); // create it if it doesn't exist yet
+  }
+  // configure ratio/thickness input & label
+  const fixedRow = document.getElementById('fixedSticksRow');
+  fixedRow.style.display = (mode === 'sticks') ? '' : 'none';
+  //configureRatioForMode(); // switches label, limits, and displayed value
+
+  // Hide/show bottom sliders in sticks mode
+  const opacityRow = document.getElementById('opacityRow');
+  const tubeDarkRow = document.getElementById('tubeDarkRow');
+  if (opacityRow)  opacityRow.style.display  = (mode === 'sticks') ? 'none' : '';
+  if (tubeDarkRow) tubeDarkRow.style.display = (mode === 'sticks') ? 'none' : '';
+  configureRatioForMode();
+
+  if (mode === 'sticks') {
+    captureRestLengths();
+    clearStickCylinders();
+    rebuildStickCylinders();
+    rebuildStickVertexSpheres();
+  } else {
+    clearStickCylinders();
+    rebuildTubeCenterline();
+    clearStickVertexSpheres();
+  }
 }
+
+function setTubeThickness(v) {
+  tubeRadiusSticks = Math.max(0.01, Math.min(0.6, Number(v)));
+  const ratioInput = document.getElementById('ratioInput');
+  if (ratioInput && mode === 'sticks') ratioInput.value = tubeRadiusSticks.toFixed(3);
+  rebuildStickCylinders();
+  rebuildStickVertexSpheres();
+}
+
+function configureRatioForMode() {
+  const ratioInput = document.getElementById('ratioInput');
+  const ratioLabel = document.querySelector('label[for="ratioInput"]');
+  if (!ratioInput || !ratioLabel) return;
+
+  if (mode === 'balls') {
+    ratioLabel.textContent = 'Overlap ratio';
+    ratioInput.min = '0.8';
+    ratioInput.max = '1';
+    ratioInput.step = '0.001';
+    ratioInput.value = Number(ratio).toFixed(3);
+  } else {
+    ratioLabel.textContent = 'Tube thickness';
+    ratioInput.min = '0.01';
+    ratioInput.max = '0.60';
+    ratioInput.step = '0.001';
+    ratioInput.value = Number(tubeRadiusSticks).toFixed(3);
+  }
+}
+
 
 // ---------- Presets ----------
 
@@ -361,9 +503,9 @@ function applyPreset(name) {
   } else if (name === 'stevedore_22') {
     setBallCount(22);
     for (let i = 0; i < 22; i++) spheres[i].position.set(...STEVEDORE_22[i]);
-  } else if (name === 'double_fisherman_37') {
-    setBallCount(37);
-    for (let i = 0; i < 37; i++) spheres[i].position.set(...LOCKED_DOUBLE_FISHERMAN_37[i]);
+  } else if (name === 'knot_9_29') {
+    setBallCount(9);
+    for (let i = 0; i < 9; i++) spheres[i].position.set(...KNOT_9_29[i]);
   } else {
     // default chain (11)
     setBallCount(11);
@@ -392,6 +534,7 @@ function onResize() {
 }
 
 function rebuildTubeCenterline() {
+  if (mode !== 'balls') { if (tubeMesh) tubeMesh.visible = false; return; }
   if (spheres.length < 2) return;
   const centers = spheres.map(s => s.position.clone());
   const curve = new THREE.CatmullRomCurve3(centers, closedChain, 'centripetal');
@@ -411,42 +554,264 @@ function rebuildTubeCenterline() {
     tubeMesh.geometry = newGeom;
   }
 }
+function clearStickVertexSpheres() {
+  for (const m of stickVertexSpheres) {
+    scene.remove(m);
+    m.geometry && m.geometry.dispose();
+    m.material && m.material.dispose?.();
+  }
+  stickVertexSpheres = [];
+  stickVertexMaterial = null;
+}
+
+function rebuildStickVertexSpheres() {
+  const n = spheres.length;
+  const r = 2 * tubeRadiusSticks; // small visual dots
+
+  // material: grayscale to match tube darkness
+  const intensity = 1 - tubeDark;
+  if (!stickVertexMaterial) {
+    stickVertexMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.0, roughness: 0.3,
+      color: new THREE.Color(intensity, intensity, intensity)
+    });
+  } else {
+    stickVertexMaterial.color.setScalar(intensity);
+    stickVertexMaterial.needsUpdate = true;
+  }
+
+  // grow/shrink pool
+  while (stickVertexSpheres.length < n) {
+    const geom = new THREE.SphereGeometry(r, 16, 12);
+    const mesh = new THREE.Mesh(geom, stickVertexMaterial);
+    scene.add(mesh);
+    stickVertexSpheres.push(mesh);
+  }
+  while (stickVertexSpheres.length > n) {
+    const m = stickVertexSpheres.pop();
+    scene.remove(m);
+    m.geometry.dispose();
+    // material is shared; don't dispose here
+  }
+
+  // ensure radius matches current thickness (rebuild geometry for each)
+  for (let i = 0; i < stickVertexSpheres.length; i++) {
+    const m = stickVertexSpheres[i];
+    m.geometry.dispose();
+    m.geometry = new THREE.SphereGeometry(r, 16, 12);
+  }
+  updateStickVertexSpheresPositions();
+}
+
+function updateStickVertexSpheresPositions() {
+  for (let i = 0; i < stickVertexSpheres.length; i++) {
+    stickVertexSpheres[i].position.copy(spheres[i].position);
+    stickVertexSpheres[i].visible = (mode === 'sticks');
+  }
+}
+
+
+function clearStickCylinders() {
+  for (const m of segmentCyls) {
+    scene.remove(m);
+    m.geometry && m.geometry.dispose();
+    m.material && m.material.dispose?.();
+  }
+  segmentCyls = [];
+}
+
+function rebuildStickCylinders() {
+  // ensure one cylinder per neighbor segment (and wrap if closed)
+  const centers = spheres.map(s => s.position.clone());
+  const segCount = closedChain ? centers.length : Math.max(centers.length - 1, 0);
+
+  // grow/shrink pool
+  while (segmentCyls.length < segCount) {
+    const mat = new THREE.MeshStandardMaterial({ metalness: 0.0, roughness: 0.25, color: 0x222222 });
+    const geom = new THREE.CylinderGeometry(tubeRadiusSticks, tubeRadiusSticks, 1, 12, 1, true);
+    const mesh = new THREE.Mesh(geom, mat);
+    scene.add(mesh);
+    segmentCyls.push(mesh);
+  }
+  while (segmentCyls.length > segCount) {
+    const m = segmentCyls.pop();
+    scene.remove(m);
+    m.geometry.dispose();
+    m.material.dispose?.();
+  }
+
+  // orient and scale each cylinder
+  const up = new THREE.Vector3(0,1,0);
+  for (let i = 0; i < segCount; i++) {
+    const a = centers[i];
+    const b = (i === centers.length - 1) ? centers[0] : centers[i+1];
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const len = Math.max(1e-6, dir.length());
+    const m = segmentCyls[i];
+
+    // scale height to len
+    m.scale.set(1, 1, 1);
+    m.geometry.dispose();
+    m.geometry = new THREE.CylinderGeometry(tubeRadiusSticks, tubeRadiusSticks, len, 10, 1, true);
+
+    // orient: cylinder Y axis to dir
+    m.position.copy(mid);
+    const quat = new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize());
+    m.setRotationFromQuaternion(quat);
+  }
+}
 
 function checkConstraints() {
   const msgLines = [];
   const n = spheres.length;
   const P = spheres.map(s => s.position);
 
-  // neighbor tangencies
-  for (let i = 0; i < n - 1; i++) {
-    const d = P[i].distanceTo(P[i + 1]);
-    if (Math.abs(d - 2) > TOL) {
-      msgLines.push(`Tangency error: balls ${i}-${i+1} dist=${d.toFixed(3)}`);
+  if (mode === 'balls') {
+    // neighbor tangencies
+    for (let i = 0; i < n - 1; i++) {
+      const d = P[i].distanceTo(P[i + 1]);
+      if (Math.abs(d - 2) > TOL) msgLines.push(`Tangency error: balls ${i}-${i+1} dist=${d.toFixed(3)}`);
     }
-  }
- if (closedChain && n >= 2) {
-    const d = P[0].distanceTo(P[n - 1]);
-    if (Math.abs(d - 2) > TOL) {
-      msgLines.push(`Tangency error: balls 0-${n-1} dist=${d.toFixed(3)}`);
+    if (closedChain && n >= 2) {
+      const d = P[0].distanceTo(P[n - 1]);
+      if (Math.abs(d - 2) > TOL) msgLines.push(`Tangency error: balls 0-${n-1} dist=${d.toFixed(3)}`);
     }
-  }
-  // non-neighbors
-  const minSep = 2 * R * ratio - TOL;
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 2; j < n; j++) {
-      if (closedChain && i === 0 && j === n - 1) continue;
-      const d = P[i].distanceTo(P[j]);
-      if (d < minSep) {
-        msgLines.push(`Overlap error: balls ${i}-${j} dist=${d.toFixed(3)}`);
+    // non-neighbors (skip wrap pair when closed)
+    const minSep = 2 * R * ratio - TOL;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 2; j < n; j++) {
+        if (closedChain && i === 0 && j === n - 1) continue;
+        const d = P[i].distanceTo(P[j]);
+        if (d < minSep) msgLines.push(`Overlap error: balls ${i}-${j} dist=${d.toFixed(3)}`);
+      }
+    }
+  } else {
+    // STICKS: report segment-segment near collisions
+    const segs = [];
+    const segCount = closedChain ? n : Math.max(n - 1, 0);
+    for (let i = 0; i < segCount; i++) segs.push([i, (i + 1) % n]);
+    const minD = 2 * tubeRadiusSticks;
+    for (let a = 0; a < segs.length; a++) {
+      for (let b = a + 1; b < segs.length; b++) {
+        const [i, i2] = segs[a]; const [j, j2] = segs[b];
+        if (i === j || i2 === j || (closedChain && j2 === i)) continue; // share vertex
+        const { d2 } = closestPointsOnSegments(P[i], P[i2], P[j], P[j2]);
+        if (d2 < (minD * minD - 1e-6)) {
+          msgLines.push(`Self-intersection risk: seg ${i}-${i2} vs ${j}-${j2} (d<${minD.toFixed(3)})`);
+        }
+      }
+    }
+    if (fixedSticks) {
+      // Optional: report length drift
+      for (let i = 0; i < Math.min(restLengths.length, segCount); i++) {
+        const a = P[i], b = P[(i+1) % n], d = a.distanceTo(b);
+        if (Math.abs(d - restLengths[i]) > 1e-3) {
+          msgLines.push(`Length drift on seg ${i}-${(i+1)%n}: ${d.toFixed(3)} vs ${restLengths[i].toFixed(3)}`);
+        }
       }
     }
   }
 
   const box = document.getElementById('constraintWarning');
-  box.textContent = (msgLines.length > 0)
-    ? "⚠️ Constraint violations:\n" + msgLines.join("\n")
-    : "";
+  box.textContent = (msgLines.length > 0) ? "⚠️ Constraint issues:\n" + msgLines.join("\n") : "";
 }
+
+
+function closestPointsOnSegments(p1, q1, p2, q2) {
+  // Returns {c1, c2, d2} where c1/c2 are closest points and d2 is squared distance
+  const EPS = 1e-9;
+  const d1 = q1.clone().sub(p1);
+  const d2v = q2.clone().sub(p2);
+  const r = p1.clone().sub(p2);
+  const a = d1.dot(d1);
+  const e = d2v.dot(d2v);
+  const f = d2v.dot(r);
+
+  let s, t;
+  if (a <= EPS && e <= EPS) {
+    s = t = 0;
+  } else if (a <= EPS) {
+    s = 0; t = THREE.MathUtils.clamp(f/e, 0, 1);
+  } else {
+    const c = d1.dot(r);
+    if (e <= EPS) {
+      t = 0; s = THREE.MathUtils.clamp(-c/a, 0, 1);
+    } else {
+      const b = d1.dot(d2v);
+      const denom = a*e - b*b;
+      s = (denom !== 0) ? THREE.MathUtils.clamp((b*f - c*e)/denom, 0, 1) : 0;
+      t = (b*s + f)/e;
+      if (t < 0) { t = 0; s = THREE.MathUtils.clamp(-c/a, 0, 1); }
+      else if (t > 1) { t = 1; s = THREE.MathUtils.clamp((b - c)/a, 0, 1); }
+    }
+  }
+  const c1 = p1.clone().add(d1.multiplyScalar(s));
+  const c2 = p2.clone().add(d2v.multiplyScalar(t));
+  return { c1, c2, d2: c1.distanceToSquared(c2) };
+}
+
+function resolveSelfIntersections(P, radius, iters = 1) {
+  // Separate non-adjacent segments if their centerlines are closer than 2*radius
+  const n = P.length;
+  const pairs = [];
+  for (let i = 0; i < n - 1 + (closedChain ? 1 : 0); i++) {
+    const i2 = (i + 1) % n;
+    for (let j = i + 2; j < n - (closedChain ? 0 : 1); j++) {
+      const j2 = (j + 1) % n;
+      // skip if segments share a vertex (adjacent) or are the wrap pair in open chain
+      if (i === j || i2 === j || (closedChain && j2 === i)) continue;
+      pairs.push([i, i2, j, j2]);
+    }
+  }
+  const minD = 2 * radius;
+  const minD2 = minD * minD;
+
+  for (let k = 0; k < iters; k++) {
+    for (const [i, i2, j, j2] of pairs) {
+      const { c1, c2, d2 } = closestPointsOnSegments(P[i], P[i2], P[j], P[j2]);
+      if (d2 < minD2) {
+        const d = Math.sqrt(d2) || 1e-6;
+        const push = (minD - d) * 0.5;
+        const dir = c1.clone().sub(c2).multiplyScalar(push / d);
+        // Distribute correction to the four endpoints (simple split)
+        P[i].add(dir.clone().multiplyScalar(0.5));
+        P[i2].add(dir.clone().multiplyScalar(0.5));
+        P[j].sub(dir.clone().multiplyScalar(0.5));
+        P[j2].sub(dir.clone().multiplyScalar(0.5));
+      }
+    }
+  }
+}
+
+function captureRestLengths() {
+  restLengths = [];
+  const n = spheres.length;
+  const segCount = closedChain ? n : Math.max(n - 1, 0);
+  for (let i = 0; i < segCount; i++) {
+    const a = spheres[i].position, b = spheres[(i+1) % n].position;
+    restLengths.push(a.distanceTo(b));
+  }
+}
+
+function enforceSegmentLengths(P, iters = 1) {
+  const n = P.length;
+  const segCount = closedChain ? n : Math.max(n - 1, 0);
+  for (let k = 0; k < iters; k++) {
+    for (let i = 0; i < segCount; i++) {
+      const a = P[i], b = P[(i+1) % n];
+      const target = restLengths[i] || a.distanceTo(b);
+      const delta = b.clone().sub(a);
+      let d = delta.length();
+      if (d < 1e-9) continue;
+      const diff = (d - target) * 0.5;
+      const corr = delta.multiplyScalar(diff / d);
+      a.add(corr);
+      b.sub(corr);
+    }
+  }
+}
+
 
 // ---------- Main loop ----------
 
@@ -455,15 +820,32 @@ function animate() {
 
   const baseIters = settlingFrames > 0 ? 6 : 2;
   const P = spheres.map(m => m.position.clone());
-  projectConstraints(P, D, baseIters);               // neighbors at distance 2
-  if (closedChain) enforcePairTangency(P, 0, P.length - 1, D, baseIters);
-  resolveOverlaps(P, 2 * R * ratio, 1);              // non-neighbors ≥ 2*ratio
+
+  if (mode === 'balls') {
+    projectConstraints(P, D, baseIters);
+    if (closedChain) enforcePairTangency(P, 0, P.length - 1, D, baseIters);
+    resolveOverlaps(P, 2 * R * ratio, 1);
+  } else {
+    // STICKS
+    // (optional) very light smoothing to keep things stable:
+    if (fixedSticks) enforceSegmentLengths(P, baseIters);
+    // Avoid self-intersection based on tube radius
+    resolveSelfIntersections(P, tubeRadiusSticks, 1);
+  }
+
   for (let i = 0; i < spheres.length; i++) spheres[i].position.copy(P[i]);
   if (settlingFrames > 0) settlingFrames--;
 
-  rebuildTubeCenterline();
-  checkConstraints();
+  // Geometry refresh
+  if (mode === 'balls') {
+    rebuildTubeCenterline();
+  } else {
+    rebuildStickCylinders();
+    updateStickVertexSpheresPositions();
+  }
 
+
+  checkConstraints();
   controls.update();
   renderer.render(scene, camera);
 }

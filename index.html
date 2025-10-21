@@ -66,8 +66,17 @@
       <button id="run-py">Run Python</button>
       <div id="constraintWarning"></div>
 
+
+
       <!-- Bottom-left control panel -->
       <div id="controlPanel">
+        <div class="row">
+          <label for="modeSelect">Mode</label>
+          <select id="modeSelect">
+            <option value="balls" selected>Balls (default)</option>
+            <option value="sticks">Sticks</option>
+          </select>
+        </div>
         <div class="row">
           <label for="presetSelect">Preset</label>
           <select id="presetSelect" title="Starting positions">
@@ -76,35 +85,43 @@
             <option value="figure8_16">(Non-locked) Figure-8 (16)</option>
             <option value="double_overhand_18">(Non-locked) Double overhand knot (18)</option>
             <option value="stevedore_22">(Invalid) Stevedore knot (22)</option>
-            <option value="double_fisherman_37">(Locked?) Double Fisherman Knot (37)</option>
+            <option value="knot_9_29">Equilateral (?) 9_29</option>
           </select>
         </div>
 
         <div class="row">
-          <label for="ballCountInput">Number of Balls</label>
+          <label for="ballCountInput">Number of Objects</label>
           <input id="ballCountInput" type="number" min="2" max="60" step="1" value="11" />
         </div>
 
         <div class="row">
           <label for="ratioInput">Overlap ratio</label>
           <input id="ratioInput" type="number" min="0.8" max="1.2" step="0.001" value="1.000" />
-          <div class="hint">Non-neighbor min distance = 2 × ratio</div>
+          <div class="hint">Non-neighbor min distance = 2 × ratio or thickness</div>
         </div>
 
-        
+        <div class="row inline" id="fixedSticksRow" style="display:none;">
+          <label class="closed-left" style="font-weight:600; cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <input id="fixedSticks" type="checkbox" />
+            <span>Fixed-length sticks</span>
+          </label>
+        </div>
+
         <label class="row inline closed-left" style="font-weight:600; cursor:pointer;">
          <input id="closedChain" type="checkbox" />
          <span>Closed chain</span>
         </label>
-        <div class="row">
+        
+        <div class="row" id="opacityRow">
           <label for="opacitySlider">Ball opacity</label>
           <input id="opacitySlider" type="range" min="0.1" max="1" step="0.01" value="0.9" />
         </div>
 
-        <div class="row">
+        <div class="row" id="tubeDarkRow">
           <label for="tubeColorSlider">Tube darkness</label>
           <input id="tubeColorSlider" type="range" min="0" max="1" step="0.001" value="0.3" />
         </div>
+
       </div>
     </div>
 
